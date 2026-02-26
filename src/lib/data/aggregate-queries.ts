@@ -1389,6 +1389,144 @@ async function loadWhaleDirectoryFromSnapshotTable(): Promise<WhaleManagerDirect
   }));
 }
 
+async function loadMarketHubFromWhaleSnapshotTables(): Promise<MarketHubAggregateDto | null> {
+  const directoryRows = await fetchSupabaseRows<DbWhaleManagerDirectorySnapshotRow>("whale_manager_directory_snapshot", {
+    select: "manager_id,manager_name,institution_name,representative_manager,report_period,latest_filing_date,holdings_count,total_value_usd_thousands,rank,stale",
+    order: "rank.asc,manager_name.asc",
+    limit: "100"
+  });
+
+  if (directoryRows.length === 0) {
+    return null;
+  }
+
+  const holdingsRows = await fetchSupabaseRowsWithPagination<DbWhaleManagerHoldingsSnapshotRow>(
+    "whale_manager_holdings_snapshot",
+    {
+      select: "manager_id,manager_name,report_period,accession,ticker,issuer_name,action_type,value_usd_thousands,shares,weight_pct,cost,price,gap_pct,gap_known,gap_reason,price_timestamp,source,calc_version,freshness,stale_reason",
+      order: "manager_id.asc,weight_pct.desc,ticker.asc"
+    },
+    2000
+  );
+
+  const managerIds = new Set(directoryRows.map((row) => row.manager_id));
+  const tickerToManagerIds = new Map<string, Set<string>>();
+  let latestReportPeriod = "";
+  let highestMarginOfSafety: {
+    ticker: string;
+    gapPct: number;
+    accession: string;
+    priceTimestamp: string;
+    calcVersion: string;
+    source: string;
+    freshness: "fresh" | "stale";
+    staleReason?: string;
+  } | null = null;
+
+  for (const row of directoryRows) {
+    if (!latestReportPeriod || new Date(row.report_period).getTime() > new Date(latestReportPeriod).getTime()) {
+      latestReportPeriod = row.report_period;
+    }
+  }
+
+  for (const row of holdingsRows) {
+    if (!managerIds.has(row.manager_id)) {
+      continue;
+    }
+
+    const ticker = toNormalizedTickerOrNull(row.ticker);
+    if (ticker) {
+      const owners = tickerToManagerIds.get(ticker) ?? new Set<string>();
+      owners.add(row.manager_id);
+      tickerToManagerIds.set(ticker, owners);
+    }
+
+    if (!row.gap_known) {
+      continue;
+    }
+
+    const parsedGap = parseNullableNumber(row.gap_pct);
+    if (parsedGap === null) {
+      continue;
+    }
+
+    const gapPct = parsedGap * 100;
+    if (!Number.isFinite(gapPct)) {
+      continue;
+    }
+
+    if (!highestMarginOfSafety || gapPct < highestMarginOfSafety.gapPct) {
+      highestMarginOfSafety = {
+        ticker: ticker ?? row.ticker,
+        gapPct,
+        accession: row.accession,
+        priceTimestamp: row.price_timestamp,
+        calcVersion: row.calc_version,
+        source: row.source,
+        freshness: row.freshness === "stale" ? "stale" : "fresh",
+        staleReason: row.stale_reason ?? undefined
+      };
+    }
+  }
+
+  const mostOwned = [...tickerToManagerIds.entries()]
+    .map(([ticker, owners]) => ({
+      ticker,
+      institutionCount: owners.size
+    }))
+    .sort((left, right) => {
+      if (right.institutionCount !== left.institutionCount) {
+        return right.institutionCount - left.institutionCount;
+      }
+
+      return left.ticker.localeCompare(right.ticker);
+    })
+    .slice(0, 5);
+
+  const featuredInstitutions = [...directoryRows]
+    .sort((left, right) => {
+      if (left.rank !== right.rank) {
+        return left.rank - right.rank;
+      }
+
+      return left.manager_name.localeCompare(right.manager_name);
+    })
+    .slice(0, 5)
+    .map((row) => ({
+      institutionName: row.institution_name,
+      representativeManager: row.representative_manager
+    }));
+
+  return {
+    trackedInstitutions: managerIds.size,
+    featuredInstitutions,
+    mostOwned,
+    hotSectorMovement: {
+      sector: "N/A",
+      deltaWeightPct: 0,
+      summary: "Sector rotation is unavailable from whale snapshot tables."
+    },
+    highestMarginOfSafety: {
+      ticker: highestMarginOfSafety?.ticker ?? "N/A",
+      gapPct: highestMarginOfSafety?.gapPct ?? 0,
+      accession: highestMarginOfSafety?.accession ?? "missing",
+      priceTimestamp: highestMarginOfSafety?.priceTimestamp ?? new Date().toISOString(),
+      calcVersion: highestMarginOfSafety?.calcVersion ?? "whale-snapshot-v1",
+      source: highestMarginOfSafety?.source ?? "snapshot-empty",
+      freshness: highestMarginOfSafety?.freshness ?? "stale",
+      staleReason: highestMarginOfSafety?.staleReason
+    },
+    sectorRotation: {
+      updatedQuarter: latestReportPeriod ? formatQuarterLabel(latestReportPeriod) : "Not published",
+      flows: []
+    },
+    sectorConcentration: [],
+    cashTrend: {
+      series: []
+    }
+  };
+}
+
 export async function queryWhaleManagerDirectory(
   source?: AggregateSourceBundle
 ): Promise<WhaleManagerDirectoryItemDto[]> {
@@ -1429,6 +1567,11 @@ export async function queryMarketHubAggregates(
     dbSnapshot = await loadDbTop50Snapshot();
   } catch (error: unknown) {
     if (isSupabaseSnapshotEmptyError(error)) {
+      const snapshotFallback = await loadMarketHubFromWhaleSnapshotTables();
+      if (snapshotFallback) {
+        return snapshotFallback;
+      }
+
       return buildEmptyMarketHubAggregates();
     }
 

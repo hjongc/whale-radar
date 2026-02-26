@@ -1438,6 +1438,10 @@ body {
     color: color-mix(in srgb, var(--wi-accent-sunset) 85%, #ffffff);
   }
 
+  .wi-gap-number[data-tone="neutral"] {
+    color: var(--wi-text-secondary);
+  }
+
   .positions-row {
     transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
   }
@@ -1557,6 +1561,10 @@ body {
 
   .wi-gap-value[data-tone="negative"] {
     color: color-mix(in srgb, var(--wi-accent-sunset) 84%, #ffffff);
+  }
+
+  .wi-gap-value[data-tone="neutral"] {
+    color: var(--wi-text-secondary);
   }
 
   .wi-change-mix {

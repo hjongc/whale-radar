@@ -407,4 +407,141 @@ describe("Top-50 DB-path contract", () => {
     });
     expect(market.highestMarginOfSafety.priceTimestamp).toEqual(expect.any(String));
   });
+
+  it("builds market hub payload from whale snapshot tables when top50 base snapshot is unavailable", async () => {
+    const snapshotDirectoryRows = [
+      {
+        manager_id: "cik-0000000001",
+        manager_name: "Manager One",
+        institution_name: "Institution 01",
+        representative_manager: "Manager One",
+        report_period: "2025-12-31",
+        latest_filing_date: "2026-02-20",
+        holdings_count: 2,
+        total_value_usd_thousands: 12000,
+        rank: 1,
+        stale: false
+      },
+      {
+        manager_id: "cik-0000000002",
+        manager_name: "Manager Two",
+        institution_name: "Institution 02",
+        representative_manager: "Manager Two",
+        report_period: "2025-12-31",
+        latest_filing_date: "2026-02-20",
+        holdings_count: 2,
+        total_value_usd_thousands: 11000,
+        rank: 2,
+        stale: false
+      }
+    ];
+
+    const snapshotHoldingRows = [
+      {
+        manager_id: "cik-0000000001",
+        manager_name: "Manager One",
+        report_period: "2025-12-31",
+        accession: "0000-1-latest",
+        ticker: "AAPL",
+        issuer_name: "Apple Inc.",
+        action_type: "KEEP",
+        value_usd_thousands: 8000,
+        shares: 80,
+        weight_pct: 60,
+        cost: 120,
+        price: 100,
+        gap_pct: -0.1667,
+        gap_known: true,
+        gap_reason: null,
+        price_timestamp: "2026-02-20T00:00:00.000Z",
+        source: "yahoo",
+        calc_version: "vwap-quarter-v1",
+        freshness: "fresh",
+        stale_reason: null
+      },
+      {
+        manager_id: "cik-0000000002",
+        manager_name: "Manager Two",
+        report_period: "2025-12-31",
+        accession: "0000-2-latest",
+        ticker: "AAPL",
+        issuer_name: "Apple Inc.",
+        action_type: "ADD",
+        value_usd_thousands: 6000,
+        shares: 70,
+        weight_pct: 55,
+        cost: 130,
+        price: 100,
+        gap_pct: -0.2307,
+        gap_known: true,
+        gap_reason: null,
+        price_timestamp: "2026-02-20T00:00:00.000Z",
+        source: "yahoo",
+        calc_version: "vwap-quarter-v1",
+        freshness: "fresh",
+        stale_reason: null
+      },
+      {
+        manager_id: "cik-0000000001",
+        manager_name: "Manager One",
+        report_period: "2025-12-31",
+        accession: "0000-1-latest",
+        ticker: "MSFT",
+        issuer_name: "Microsoft Corp",
+        action_type: "ADD",
+        value_usd_thousands: 4000,
+        shares: 40,
+        weight_pct: 40,
+        cost: null,
+        price: 100,
+        gap_pct: null,
+        gap_known: false,
+        gap_reason: "no_previous_cost_basis",
+        price_timestamp: "2026-02-20T00:00:00.000Z",
+        source: "yahoo",
+        calc_version: "vwap-quarter-v1",
+        freshness: "stale",
+        stale_reason: "stale_price"
+      }
+    ];
+
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      const table = url.pathname.split("/").at(-1);
+
+      if (table === "institutions" || table === "filings" || table === "positions") {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+
+      if (table === "whale_manager_directory_snapshot") {
+        return new Response(JSON.stringify(snapshotDirectoryRows), { status: 200 });
+      }
+
+      if (table === "whale_manager_holdings_snapshot") {
+        return new Response(JSON.stringify(snapshotHoldingRows), { status: 200 });
+      }
+
+      return new Response(JSON.stringify([]), { status: 200 });
+    });
+
+    const market = await queryMarketHubAggregates();
+    expect(market.trackedInstitutions).toBe(2);
+    expect(market.featuredInstitutions).toHaveLength(2);
+    expect(market.mostOwned[0]).toEqual({
+      ticker: "AAPL",
+      institutionCount: 2
+    });
+    expect(market.highestMarginOfSafety).toMatchObject({
+      ticker: "AAPL",
+      accession: "0000-2-latest",
+      calcVersion: "vwap-quarter-v1",
+      source: "yahoo",
+      freshness: "fresh"
+    });
+    expect(market.highestMarginOfSafety.gapPct).toBeCloseTo(-23.07, 2);
+    expect(market.sectorRotation).toEqual({
+      updatedQuarter: "2025Q4",
+      flows: []
+    });
+  });
 });
