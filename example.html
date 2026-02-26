@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhaleInsight Pro - 거인의 전략 분석</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #0f172a; color: #f8fafc; overflow-x: hidden; scroll-behavior: smooth; }
+        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 1rem; transition: all 0.3s ease; }
+        .card:hover { border-color: #475569; }
+        .gradient-text { background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .tab-active { border-bottom: 2px solid #38bdf8; color: #38bdf8; }
+        .badge-new { background-color: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-add { background-color: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-reduce { background-color: #f59e0b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .row-highlight { background-color: rgba(56, 189, 248, 0.15) !important; outline: 1px solid #38bdf8; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Select Styling */
+        select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header Navigation -->
+    <header class="max-w-7xl mx-auto mb-10">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 class="text-3xl font-bold gradient-text">WhaleInsight Pro</h1>
+                <p class="text-slate-400 text-sm mt-1 font-medium">13F 공시 기반 지능형 투자 데이터 플랫폼</p>
+            </div>
+            <nav class="flex gap-8 text-sm font-bold bg-slate-800/50 p-1 rounded-full border border-slate-700/50">
+                <button onclick="showTab('market')" id="tab-market" class="px-6 py-2 rounded-full tab-active bg-slate-800">마켓 허브</button>
+                <button onclick="showTab('whale')" id="tab-whale" class="px-6 py-2 rounded-full text-slate-400 hover:text-white transition">고래 인사이더</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto">
+
+        <!-- [Section 1] Market Hub (Landing) -->
+        <div id="section-market" class="tab-content animate-fade-in space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="card p-6 border-l-4 border-l-blue-500">
+                    <h3 class="text-slate-400 text-xs font-bold mb-4 uppercase tracking-wider">Most Owned Stocks</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold">Microsoft (MSFT)</span>
+                            <span class="text-blue-400 text-xs bg-blue-400/10 px-2 py-1 rounded">82 Institutions</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold">Alphabet (GOOGL)</span>
+                            <span class="text-blue-400 text-xs bg-blue-400/10 px-2 py-1 rounded">76 Institutions</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold">Amazon (AMZN)</span>
+                            <span class="text-blue-400 text-xs bg-blue-400/10 px-2 py-1 rounded">68 Institutions</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-6 border-l-4 border-l-emerald-500">
+                    <h3 class="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Hot Sector Movement</h3>
+                    <p class="text-3xl font-bold mt-2 text-emerald-400">에너지 (Energy)</p>
+                    <p class="text-sm text-slate-400 mt-2 leading-relaxed">평균 비중 4.2% 증가. 고유가 지속 전망에 따른 거물들의 집중 매집 포착.</p>
+                </div>
+                <div class="card p-6 border-l-4 border-l-rose-500">
+                    <h3 class="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Highest Margin of Safety</h3>
+                    <p class="text-3xl font-bold mt-2 text-rose-400">PayPal (PYPL)</p>
+                    <p class="text-sm text-slate-400 mt-2">기관 추정 평단가 대비 <span class="text-emerald-400 font-bold">-24.5%</span> 저렴한 구간.</p>
+                </div>
+            </div>
+
+            <!-- Sector Rotation (Sankey) -->
+            <div class="card p-8">
+                <div class="flex justify-between items-start mb-10">
+                    <div>
+                        <h3 class="text-xl font-bold">자본의 대이동 (Sector Rotation Map)</h3>
+                        <p class="text-slate-400 text-sm mt-1">상위 50개 기관의 분기별 섹터 자금 흐름</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-slate-500 block mb-1">DATA UPDATED</span>
+                        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">2024.Q1 Final Disclosure</span>
+                    </div>
+                </div>
+                <div class="bg-slate-900/40 p-6 rounded-2xl relative overflow-x-auto">
+                    <svg viewBox="0 0 800 400" class="w-full h-auto min-w-[700px]">
+                        <!-- Sankey Layout -->
+                        <path d="M170 80 C 400 80, 400 120, 630 120" stroke="rgba(56, 189, 248, 0.4)" stroke-width="60" fill="none"/>
+                        <path d="M170 200 C 400 200, 400 150, 630 150" stroke="rgba(129, 140, 248, 0.4)" stroke-width="80" fill="none"/>
+                        <path d="M170 280 C 400 280, 400 320, 630 320" stroke="rgba(244, 63, 94, 0.4)" stroke-width="30" fill="none"/>
+                        
+                        <!-- Left Nodes -->
+                        <rect x="50" y="50" width="120" height="300" rx="12" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                        <text x="110" y="40" text-anchor="middle" fill="#94a3b8" font-size="12" font-weight="bold">PREV QUARTER</text>
+                        <text x="110" y="100" text-anchor="middle" fill="white" font-size="14" font-weight="600">IT / Tech</text>
+                        <text x="110" y="200" text-anchor="middle" fill="white" font-size="14" font-weight="600">Finance</text>
+                        <text x="110" y="300" text-anchor="middle" fill="white" font-size="14" font-weight="600">Health Care</text>
+
+                        <!-- Right Nodes -->
+                        <rect x="630" y="50" width="120" height="300" rx="12" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                        <text x="690" y="40" text-anchor="middle" fill="#94a3b8" font-size="12" font-weight="bold">CURRENT QUARTER</text>
+                        <text x="690" y="120" text-anchor="middle" fill="white" font-size="14" font-weight="600">Energy</text>
+                        <text x="690" y="220" text-anchor="middle" fill="white" font-size="14" font-weight="600">Big Tech</text>
+                        <text x="690" y="320" text-anchor="middle" fill="white" font-size="14" font-weight="600">Consumables</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-6">기관 통합 섹터 쏠림도</h3>
+                    <div class="h-[300px]"><canvas id="marketSectorChart"></canvas></div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-6">시장 현금 비중 추이 (Safety Index)</h3>
+                    <div class="h-[300px]"><canvas id="marketCashChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- [Section 2] Whale Insider (Page A) -->
+        <div id="section-whale" class="tab-content hidden animate-fade-in space-y-8">
+            
+            <!-- Manager Selection & Search -->
+            <div class="card p-6 flex flex-col md:flex-row gap-6 items-center bg-gradient-to-r from-slate-800 to-slate-900 shadow-xl">
+                <div class="w-full md:w-1/3">
+                    <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Whale Selection</label>
+                    <select id="whale-select" onchange="loadWhaleData()" class="w-full bg-slate-800 border-slate-700 rounded-xl px-4 py-3 font-bold text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="berkshire">Berkshire Hathaway (워런 버핏)</option>
+                        <option value="scion">Scion Asset (마이클 버리)</option>
+                        <option value="pershing">Pershing Square (빌 애크먼)</option>
+                        <option value="ark">ARK Invest (캐시 우드)</option>
+                    </select>
+                </div>
+                <div class="w-full md:w-2/3">
+                    <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Search Manager or Ticker</label>
+                    <div class="relative">
+                        <input type="text" placeholder="기관명 또는 종목명을 직접 검색하세요..." class="w-full bg-slate-800 border-slate-700 rounded-xl px-4 py-3 pl-12 text-sm focus:outline-none focus:border-blue-500">
+                        <svg class="w-5 h-5 text-slate-500 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Banner -->
+            <div class="bg-indigo-900/20 border border-indigo-500/30 p-5 rounded-2xl flex items-center gap-4">
+                <div class="bg-indigo-500 p-3 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <div>
+                    <h4 class="font-bold text-indigo-300"><span id="active-whale-name">Berkshire Hathaway</span> Insight</h4>
+                    <p class="text-indigo-100/70 text-sm">차트의 막대를 클릭하면 하단 테이블에서 해당 종목이 하이라이트됩니다.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Detailed Gap Analysis -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-6">기관 평단가 대비 가격 갭 (Gap Finder)</h3>
+                    <div class="h-[350px]"><canvas id="whaleGapChart"></canvas></div>
+                </div>
+
+                <!-- Position Mix -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-6">이번 분기 포지션 행동 (Change Mix)</h3>
+                    <div class="h-[350px]"><canvas id="whaleChangeChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- [Page A Part 2] Position Details Table -->
+            <div id="positions-container" class="space-y-6 pt-4">
+                <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-1">포지션 상세 분석</h2>
+                        <p class="text-sm text-slate-400">거인의 모든 보유 종목과 행동 양식을 데이터로 확인하세요.</p>
+                    </div>
+                    <div class="flex gap-2" id="type-filters">
+                        <button onclick="applyTableFilter('ALL')" class="filter-btn bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold">전체</button>
+                        <button onclick="applyTableFilter('NEW')" class="filter-btn bg-slate-800 text-slate-400 px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-600/20">NEW</button>
+                        <button onclick="applyTableFilter('ADD')" class="filter-btn bg-slate-800 text-slate-400 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600/20">ADD</button>
+                        <button onclick="applyTableFilter('REDUCE')" class="filter-btn bg-slate-800 text-slate-400 px-4 py-2 rounded-lg text-sm font-bold hover:bg-amber-600/20">REDUCE</button>
+                    </div>
+                </div>
+
+                <div class="card overflow-x-auto">
+                    <table class="w-full text-left text-sm" id="whale-table">
+                        <thead class="bg-slate-800 text-slate-400 uppercase text-xs">
+                            <tr>
+                                <th class="p-4">종목 (Ticker)</th>
+                                <th class="p-4">유형</th>
+                                <th class="p-4 text-right">포트 비중</th>
+                                <th class="p-4 text-right">추정 평단가</th>
+                                <th class="p-4 text-right">현재가</th>
+                                <th class="p-4 text-center">Price Gap</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700" id="whale-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Global Data Store
+        const whaleData = {
+            berkshire: [
+                { ticker: 'AAPL', type: 'ADD', weight: '42.5%', cost: 178.2, price: 185.4, gap: '+4.0%' },
+                { ticker: 'AMZN', type: 'NEW', weight: '5.2%', cost: 185.0, price: 172.3, gap: '-6.8%' },
+                { ticker: 'KO', type: 'KEEP', weight: '8.1%', cost: 58.5, price: 60.2, gap: '+2.9%' },
+                { ticker: 'CVX', type: 'REDUCE', weight: '4.8%', cost: 155.0, price: 148.5, gap: '-4.2%' },
+                { ticker: 'PYPL', type: 'NEW', weight: '1.2%', cost: 85.0, price: 64.2, gap: '-24.5%' },
+                { ticker: 'TSLA', type: 'ADD', weight: '0.8%', cost: 195.0, price: 178.2, gap: '-8.6%' },
+                { ticker: 'GOOGL', type: 'ADD', weight: '2.5%', cost: 145.0, price: 152.4, gap: '+5.1%' }
+            ]
+        };
+
+        let gapChart, changeChart;
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('tab-active', 'bg-slate-800', 'text-white');
+                b.classList.add('text-slate-400');
+            });
+
+            document.getElementById('section-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('tab-active', 'bg-slate-800', 'text-white');
+            document.getElementById('tab-' + tabId).classList.remove('text-slate-400');
+
+            if(tabId === 'whale') loadWhaleData();
+        }
+
+        function loadWhaleData() {
+            const select = document.getElementById('whale-select');
+            const whaleId = select.value;
+            const whaleName = select.options[select.selectedIndex].text.split('(')[0].trim();
+            document.getElementById('active-whale-name').innerText = whaleName;
+
+            const data = whaleData[whaleId] || whaleData.berkshire;
+            renderWhaleCharts(data);
+            renderWhaleTable(data);
+        }
+
+        function renderWhaleCharts(data) {
+            const ctxGap = document.getElementById('whaleGapChart').getContext('2d');
+            const ctxChange = document.getElementById('whaleChangeChart').getContext('2d');
+
+            if(gapChart) gapChart.destroy();
+            if(changeChart) changeChart.destroy();
+
+            // 1. Gap Chart
+            const sortedByGap = [...data].sort((a, b) => parseFloat(a.gap) - parseFloat(b.gap));
+            gapChart = new Chart(ctxGap, {
+                type: 'bar',
+                data: {
+                    labels: sortedByGap.map(d => d.ticker),
+                    datasets: [{
+                        data: sortedByGap.map(d => parseFloat(d.gap)),
+                        backgroundColor: (c) => c.raw < 0 ? '#10b981' : '#f43f5e',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (e, elements) => {
+                        if(elements.length > 0) {
+                            const ticker = gapChart.data.labels[elements[0].index];
+                            highlightTableRow(ticker);
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { display: false }, ticks: { color: '#f8fafc', font: { weight: 'bold' } } }
+                    }
+                }
+            });
+
+            // 2. Change Mix Chart
+            const counts = { NEW: 0, ADD: 0, REDUCE: 0, KEEP: 0 };
+            data.forEach(d => counts[d.type]++);
+
+            changeChart = new Chart(ctxChange, {
+                type: 'pie',
+                data: {
+                    labels: ['신규 (NEW)', '추가 (ADD)', '축소 (REDUCE)', '유지 (KEEP)'],
+                    datasets: [{
+                        data: [counts.NEW, counts.ADD, counts.REDUCE, counts.KEEP],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#475569'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (e, elements) => {
+                        if(elements.length > 0) {
+                            const label = changeChart.data.labels[elements[0].index];
+                            const type = label.match(/\(([^)]+)\)/)[1];
+                            applyTableFilter(type);
+                        }
+                    },
+                    plugins: { legend: { position: 'right', labels: { color: '#94a3b8', padding: 20 } } }
+                }
+            });
+        }
+
+        function renderWhaleTable(data) {
+            const body = document.getElementById('whale-table-body');
+            body.innerHTML = '';
+            data.forEach(item => {
+                const badge = item.type === 'NEW' ? 'badge-new' : item.type === 'ADD' ? 'badge-add' : item.type === 'REDUCE' ? 'badge-reduce' : 'text-slate-500';
+                const gapColor = parseFloat(item.gap) < 0 ? 'text-emerald-400' : 'text-rose-400';
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition whale-row";
+                tr.id = `row-${item.ticker}`;
+                tr.setAttribute('data-type', item.type);
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-blue-400">${item.ticker}</td>
+                    <td class="p-4"><span class="${badge}">${item.type}</span></td>
+                    <td class="p-4 text-right font-medium">${item.weight}</td>
+                    <td class="p-4 text-right text-slate-400">$${item.cost}</td>
+                    <td class="p-4 text-right">$${item.price}</td>
+                    <td class="p-4 text-center ${gapColor} font-bold">${item.gap}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function highlightTableRow(ticker) {
+            const rows = document.querySelectorAll('.whale-row');
+            rows.forEach(r => r.classList.remove('row-highlight'));
+            
+            const target = document.getElementById(`row-${ticker}`);
+            if(target) {
+                target.classList.add('row-highlight');
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function applyTableFilter(type) {
+            const rows = document.querySelectorAll('.whale-row');
+            const btns = document.querySelectorAll('.filter-btn');
+            
+            // UI Toggle
+            btns.forEach(btn => {
+                btn.classList.replace('bg-slate-700', 'bg-slate-800');
+                btn.classList.replace('text-white', 'text-slate-400');
+            });
+            const activeBtn = Array.from(btns).find(b => b.innerText.includes(type));
+            if(activeBtn) {
+                activeBtn.classList.replace('bg-slate-800', 'bg-slate-700');
+                activeBtn.classList.replace('text-slate-400', 'text-white');
+            }
+
+            // Row Filter
+            rows.forEach(row => {
+                if(type === 'ALL' || row.dataset.type === type) row.classList.remove('hidden');
+                else row.classList.add('hidden');
+            });
+        }
+
+        // Market Hub Init
+        window.onload = function() {
+            // Sector Polar Chart
+            new Chart(document.getElementById('marketSectorChart'), {
+                type: 'polarArea',
+                data: {
+                    labels: ['Big Tech', 'Energy', 'Financials', 'Health', 'Materials'],
+                    datasets: [{
+                        data: [42, 35, 18, 12, 22],
+                        backgroundColor: ['#38bdf888', '#10b98188', '#fbbf2488', '#f472b688', '#818cf888']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { grid: { color: '#334155' }, ticks: { display: false } } } }
+            });
+
+            // Cash Line Chart
+            new Chart(document.getElementById('marketCashChart'), {
+                type: 'line',
+                data: {
+                    labels: ['23Q1', '23Q2', '23Q3', '23Q4', '24Q1'],
+                    datasets: [{
+                        label: '시장 평균 현금 비중 (%)',
+                        data: [11, 13, 15, 18, 21.5],
+                        borderColor: '#818cf8',
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(129, 140, 248, 0.1)'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        };
+    </script>
+</body>
+</html>
